@@ -1,0 +1,120 @@
+{
+  "theme": "light",
+  "archetype": "4 (Swiss & High-Contrast)",
+  "colors": {
+    "background": {
+      "primary": "#FFFFFF",
+      "secondary": "#F9FAFB",
+      "tertiary": "#F3F4F6",
+      "glass": "rgba(255, 255, 255, 0.7)"
+    },
+    "text": {
+      "primary": "#111827",
+      "secondary": "#4B5563",
+      "tertiary": "#6B7280",
+      "inverse": "#FFFFFF",
+      "accent": "#E40000"
+    },
+    "brand": {
+      "primary": "#E40000",
+      "primary_hover": "#B30000",
+      "primary_active": "#990000",
+      "secondary": "#111827"
+    },
+    "status": {
+      "success": "#10B981",
+      "warning": "#F59E0B",
+      "error": "#EF4444",
+      "info": "#3B82F6"
+    },
+    "border": {
+      "default": "#E5E7EB",
+      "focus": "#E40000",
+      "active": "#D1D5DB"
+    }
+  },
+  "typography": {
+    "font_family": {
+      "heading": "Outfit, sans-serif",
+      "body": "IBM Plex Sans, sans-serif",
+      "mono": "IBM Plex Mono, monospace"
+    },
+    "hierarchy": {
+      "h1": "text-4xl sm:text-5xl font-bold tracking-tight text-gray-900 leading-tight",
+      "h2": "text-2xl sm:text-3xl font-semibold tracking-tight text-gray-900 leading-snug",
+      "h3": "text-xl sm:text-2xl font-medium tracking-tight text-gray-900",
+      "h4": "text-lg sm:text-xl font-medium tracking-tight text-gray-800",
+      "body_large": "text-lg text-gray-700 leading-relaxed",
+      "body_base": "text-base text-gray-600 leading-relaxed",
+      "body_small": "text-sm text-gray-500 leading-normal",
+      "label": "text-xs font-semibold tracking-[0.05em] uppercase text-gray-500"
+    }
+  },
+  "spacing": {
+    "section_padding": "py-16 md:py-24",
+    "container_padding": "px-4 sm:px-6 lg:px-8",
+    "element_gap": {
+      "small": "gap-2",
+      "medium": "gap-4 md:gap-6",
+      "large": "gap-8 md:gap-12",
+      "xlarge": "gap-16 md:gap-24"
+    }
+  },
+  "layout": {
+    "grid_system": "Control Room Grid (Dense, Data-heavy)",
+    "dashboard_grid": "grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6",
+    "week_card_grid": "grid-cols-1 lg:grid-cols-12 gap-6",
+    "container_max_width": "max-w-7xl mx-auto"
+  },
+  "surfaces": {
+    "card_default": "bg-white border border-gray-200 rounded-lg shadow-sm hover:shadow-md transition-shadow duration-200",
+    "card_interactive": "bg-white border border-gray-200 rounded-lg shadow-sm hover:border-red-600 hover:-translate-y-1 transition-all duration-200 cursor-pointer",
+    "glass_header": "bg-white/80 backdrop-blur-xl border-b border-gray-200 sticky top-0 z-50",
+    "sidebar": "bg-gray-50 border-r border-gray-200 h-full",
+    "input_field": "bg-white border border-gray-300 rounded-md focus:ring-2 focus:ring-red-600/20 focus:border-red-600 transition-colors"
+  },
+  "components": {
+    "buttons": {
+      "primary": "bg-[#E40000] text-white hover:bg-[#B30000] focus:ring-2 focus:ring-red-600/50 focus:ring-offset-2 rounded-md font-medium px-4 py-2 transition-colors",
+      "secondary": "bg-white text-gray-900 border border-gray-300 hover:bg-gray-50 focus:ring-2 focus:ring-gray-200 focus:ring-offset-2 rounded-md font-medium px-4 py-2 transition-colors",
+      "ghost": "text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-md font-medium px-4 py-2 transition-colors",
+      "danger": "bg-red-50 text-red-600 hover:bg-red-100 border border-transparent rounded-md font-medium px-4 py-2 transition-colors"
+    },
+    "progress_bar": {
+      "track": "bg-gray-100 rounded-full h-2 w-full overflow-hidden",
+      "indicator": "bg-[#E40000] h-full transition-all duration-500 ease-in-out"
+    },
+    "badges": {
+      "default": "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800",
+      "success": "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800",
+      "brand": "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800"
+    }
+  },
+  "animation": {
+    "hover_lift": "transition-transform duration-200 hover:-translate-y-1",
+    "fade_in": "animate-in fade-in duration-300",
+    "slide_up": "animate-in slide-in-from-bottom-4 duration-500",
+    "accordion": "data-[state=open]:animate-accordion-down data-[state=closed]:animate-accordion-up"
+  },
+  "icons": {
+    "library": "lucide-react",
+    "usage": "Use stroke-width 1.5 for a clean, professional look. Consistent sizing (w-4 h-4 for inline, w-5 h-5 for buttons/menus)."
+  },
+  "media": {
+    "login_hero_bg": "https://images.unsplash.com/photo-1708457753320-02e52a276a80?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1ODR8MHwxfHNlYXJjaHwyfHxyZWQlMjBhYnN0cmFjdCUyMGJhY2tncm91bmR8ZW58MHx8fHwxNzc0OTQwODU3fDA&ixlib=rb-4.1.0&q=85",
+    "empty_state_illustration": "https://images.unsplash.com/photo-1606857521015-7f9fcf423740?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDk1Nzl8MHwxfHNlYXJjaHwxfHxvZmZpY2UlMjB3b3JrZXJ8ZW58MHx8fHwxNzc0OTQwODU4fDA&ixlib=rb-4.1.0&q=85",
+    "avatar_placeholder": "https://images.pexels.com/photos/8867377/pexels-photo-8867377.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940"
+  },
+  "instructions_to_main_agent": [
+    "Follow the High-Contrast Light theme strictly. The dominant colors should be White and Stark Gray, with Airtel Red (#E40000) used purely for primary actions, progress indicators, and active states.",
+    "Do NOT use 'Inter' or generic sans-serif fonts for headings. Use 'Outfit' for all Headings (H1-H4) and 'IBM Plex Sans' for body text. Apply 'tracking-tight' to headings.",
+    "The layout must utilize dense 'Control Room' grids. Dashboard metrics and week cards should be neatly aligned with 1px borders and very subtle shadows, avoiding bulky, soft UI elements.",
+    "Incorporate the Shadcn UI components for complex interactivity: Dialogs for Add/Edit tasks, Progress for task completion tracking, Calendar/Popover for Due Dates, and Dropdown Menus for task actions.",
+    "Every key interactive element, input, and button MUST have a descriptive 'data-testid' attribute (e.g., data-testid='login-submit-button', data-testid='add-task-button', data-testid='week-1-progress').",
+    "Ensure hover, active, and focus states are clearly defined for accessibility. Focus rings should use the brand red color with slight opacity (focus:ring-red-600/50).",
+    "Implement auto-save seamlessly. Show a small 'Saving...' or 'All changes saved' indicator in the UI to give users feedback without disrupting their flow.",
+    "For the 8-Week display, use an Accordion or expandable card layout. By default, show high-level week progress. Expanding a week reveals the detailed task list, editable fields, comments, and due dates.",
+    "The Login page should feature a split layout: clean, minimalist login form on one side, and the provided 'login_hero_bg' red abstract image on the other side with an overlay.",
+    "Install and configure the necessary fonts from Google Fonts in the CSS/HTML entry points."
+  ]
+}
