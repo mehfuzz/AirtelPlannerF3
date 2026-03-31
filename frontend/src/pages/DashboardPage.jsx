@@ -24,6 +24,7 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
+import PasswordChangeDialog from "@/components/PasswordChangeDialog";
 
 const DashboardPage = () => {
   const navigate = useNavigate();
@@ -489,6 +490,9 @@ const DashboardPage = () => {
 
   return (
     <div className="min-h-screen bg-gray-50" data-testid="dashboard-page">
+      {/* Password Change Dialog for First Login */}
+      <PasswordChangeDialog />
+      
       {/* Header */}
       <header className="bg-white/80 backdrop-blur-xl border-b border-gray-200 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

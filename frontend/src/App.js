@@ -28,11 +28,16 @@ export const useAuth = () => {
 const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [showPasswordDialog, setShowPasswordDialog] = useState(false);
 
   const checkAuth = async () => {
     try {
       const response = await axios.get(`${API}/auth/me`);
       setUser(response.data);
+      // Check if first login for non-admin user
+      if (response.data.is_first_login) {
+        setShowPasswordDialog(true);
+      }
     } catch (error) {
       setUser(null);
     } finally {
@@ -49,6 +54,10 @@ const AuthProvider = ({ children }) => {
       const response = await axios.post(`${API}/auth/login`, { email, password });
       setUser(response.data);
       toast.success("Logged in successfully");
+      // Check if first login for non-admin user
+      if (response.data.is_first_login) {
+        setShowPasswordDialog(true);
+      }
       return { success: true };
     } catch (error) {
       const detail = error.response?.data?.detail;
@@ -62,14 +71,56 @@ const AuthProvider = ({ children }) => {
     try {
       await axios.post(`${API}/auth/logout`);
       setUser(null);
+      setShowPasswordDialog(false);
       toast.success("Logged out successfully");
     } catch (error) {
       console.error("Logout error:", error);
     }
   };
 
+  const changePassword = async (currentPassword, newPassword) => {
+    try {
+      await axios.post(`${API}/auth/change-password`, {
+        current_password: currentPassword,
+        new_password: newPassword
+      });
+      setUser(prev => ({ ...prev, password_changed: true, is_first_login: false }));
+      setShowPasswordDialog(false);
+      toast.success("Password changed successfully");
+      return { success: true };
+    } catch (error) {
+      const detail = error.response?.data?.detail;
+      const message = formatApiError(detail);
+      toast.error(message);
+      return { success: false, error: message };
+    }
+  };
+
+  const keepPassword = async () => {
+    try {
+      await axios.post(`${API}/auth/keep-password`);
+      setUser(prev => ({ ...prev, password_changed: true, is_first_login: false }));
+      setShowPasswordDialog(false);
+      toast.success("Password preference saved");
+      return { success: true };
+    } catch (error) {
+      toast.error("Failed to save preference");
+      return { success: false };
+    }
+  };
+
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout, checkAuth }}>
+    <AuthContext.Provider value={{ 
+      user, 
+      loading, 
+      login, 
+      logout, 
+      checkAuth, 
+      showPasswordDialog, 
+      setShowPasswordDialog,
+      changePassword,
+      keepPassword 
+    }}>
       {children}
     </AuthContext.Provider>
   );

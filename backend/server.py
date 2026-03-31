@@ -123,6 +123,13 @@ class CommentCreate(BaseModel):
 class WeekUpdate(BaseModel):
     title: Optional[str] = None
 
+class PasswordChangeRequest(BaseModel):
+    current_password: str
+    new_password: str
+
+class KeepPasswordRequest(BaseModel):
+    keep_default: bool = True
+
 # Auth endpoints
 @auth_router.post("/login")
 async def login(request: LoginRequest, response: Response):
@@ -141,12 +148,48 @@ async def login(request: LoginRequest, response: Response):
     response.set_cookie(key="access_token", value=access_token, httponly=True, secure=False, samesite="lax", max_age=86400, path="/")
     response.set_cookie(key="refresh_token", value=refresh_token, httponly=True, secure=False, samesite="lax", max_age=604800, path="/")
     
+    # Check if this is first login (password not changed yet) for non-admin users
+    password_changed = user.get("password_changed", False)
+    is_first_login = user.get("role", "user") != "admin" and not password_changed
+    
     return {
         "id": user_id,
         "email": user["email"],
         "name": user.get("name", ""),
-        "role": user.get("role", "user")
+        "role": user.get("role", "user"),
+        "password_changed": password_changed,
+        "is_first_login": is_first_login
     }
+
+@auth_router.post("/change-password")
+async def change_password(request: PasswordChangeRequest, user: dict = Depends(get_current_user)):
+    # Get user from database
+    db_user = await db.users.find_one({"_id": ObjectId(user["id"])})
+    if not db_user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Verify current password
+    if not verify_password(request.current_password, db_user["password_hash"]):
+        raise HTTPException(status_code=400, detail="Current password is incorrect")
+    
+    # Hash new password and update
+    new_hash = hash_password(request.new_password)
+    await db.users.update_one(
+        {"_id": ObjectId(user["id"])},
+        {"$set": {"password_hash": new_hash, "password_changed": True}}
+    )
+    
+    return {"message": "Password changed successfully"}
+
+@auth_router.post("/keep-password")
+async def keep_password(user: dict = Depends(get_current_user)):
+    # Mark that user has acknowledged the password prompt
+    await db.users.update_one(
+        {"_id": ObjectId(user["id"])},
+        {"$set": {"password_changed": True}}
+    )
+    
+    return {"message": "Password preference saved"}
 
 @auth_router.post("/logout")
 async def logout(response: Response):
@@ -156,7 +199,16 @@ async def logout(response: Response):
 
 @auth_router.get("/me")
 async def get_me(user: dict = Depends(get_current_user)):
-    return user
+    # Get full user data including password_changed status
+    db_user = await db.users.find_one({"_id": ObjectId(user["id"])})
+    password_changed = db_user.get("password_changed", False) if db_user else False
+    is_first_login = user["role"] != "admin" and not password_changed
+    
+    return {
+        **user,
+        "password_changed": password_changed,
+        "is_first_login": is_first_login
+    }
 
 # User management endpoints (admin only)
 @users_router.get("/", response_model=List[UserResponse])
@@ -185,6 +237,7 @@ async def create_user(request: UserCreate, user: dict = Depends(get_current_user
         "password_hash": hashed,
         "name": request.name,
         "role": "user",
+        "password_changed": False,
         "created_at": datetime.now(timezone.utc)
     }
     result = await db.users.insert_one(new_user)
