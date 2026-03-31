@@ -247,6 +247,68 @@ class AirtelPPOTrackerTester:
         except Exception as e:
             return self.log_test("User Management", False, str(e))
 
+    def test_task_reordering(self):
+        """Test task reordering functionality (drag-and-drop feature)"""
+        try:
+            # Get first week with tasks
+            weeks_response = self.session.get(f"{self.api_url}/weeks")
+            if weeks_response.status_code != 200:
+                return self.log_test("Task Reordering", False, "Could not fetch weeks")
+            
+            weeks = weeks_response.json()
+            if not weeks:
+                return self.log_test("Task Reordering", False, "No weeks found")
+            
+            # Find a week with multiple tasks
+            target_week = None
+            for week in weeks:
+                if len(week.get('tasks', [])) >= 2:
+                    target_week = week
+                    break
+            
+            if not target_week:
+                return self.log_test("Task Reordering", False, "No week with multiple tasks found")
+            
+            week_id = target_week['id']
+            original_tasks = target_week['tasks']
+            
+            # Create reversed order of task IDs
+            task_ids = [task['id'] for task in original_tasks]
+            reversed_task_ids = list(reversed(task_ids))
+            
+            # Test reordering
+            reorder_data = {"task_ids": reversed_task_ids}
+            response = self.session.put(f"{self.api_url}/weeks/{week_id}/tasks/reorder", 
+                                      json=reorder_data)
+            
+            if response.status_code != 200:
+                return self.log_test("Task Reordering", False, 
+                                   f"Reorder failed: {response.status_code}")
+            
+            # Verify the order was changed
+            updated_weeks_response = self.session.get(f"{self.api_url}/weeks")
+            if updated_weeks_response.status_code != 200:
+                return self.log_test("Task Reordering", False, "Could not verify reorder")
+            
+            updated_weeks = updated_weeks_response.json()
+            updated_week = next((w for w in updated_weeks if w['id'] == week_id), None)
+            
+            if not updated_week:
+                return self.log_test("Task Reordering", False, "Updated week not found")
+            
+            updated_task_ids = [task['id'] for task in updated_week['tasks']]
+            success = updated_task_ids == reversed_task_ids
+            
+            # Restore original order
+            self.session.put(f"{self.api_url}/weeks/{week_id}/tasks/reorder", 
+                           json={"task_ids": task_ids})
+            
+            return self.log_test("Task Reordering", success, 
+                               "Task order not updated correctly" if not success else "")
+            
+        except Exception as e:
+            return self.log_test("Task Reordering", False, str(e))
+
     def test_logout(self):
         """Test logout functionality"""
         try:
@@ -270,6 +332,7 @@ class AirtelPPOTrackerTester:
             self.test_get_weeks,
             self.test_update_week_title,
             self.test_task_operations,
+            self.test_task_reordering,
             self.test_comment_operations,
             self.test_user_management,
             self.test_logout

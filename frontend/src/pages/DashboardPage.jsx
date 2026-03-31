@@ -17,14 +17,17 @@ import {
   LogOut, Users, ChevronDown, ChevronUp, Plus, Trash2, 
   Calendar as CalendarIcon, MessageSquare, Edit2, Check, X, 
   MoreVertical, Clock, List, FileText, FileSpreadsheet,
-  ChevronLeft, ChevronRight, Download
+  ChevronLeft, ChevronRight, Download, GripVertical
 } from "lucide-react";
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, parseISO, isValid } from "date-fns";
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, addMonths, subMonths, parseISO, isValid } from "date-fns";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
 import PasswordChangeDialog from "@/components/PasswordChangeDialog";
+import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
+import { arrayMove, SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 
 const DashboardPage = () => {
   const navigate = useNavigate();
@@ -49,6 +52,12 @@ const DashboardPage = () => {
     try {
       const response = await axios.get(`${API}/weeks`);
       setWeeks(response.data);
+      // Expand all weeks by default
+      const expanded = {};
+      response.data.forEach(week => {
+        expanded[week.id] = true;
+      });
+      setExpandedWeeks(expanded);
     } catch (error) {
       toast.error(formatApiError(error.response?.data?.detail));
     }
@@ -57,6 +66,52 @@ const DashboardPage = () => {
   useEffect(() => {
     fetchWeeks();
   }, [fetchWeeks]);
+
+  // Drag and drop sensors
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  // Handle drag end for task reordering
+  const handleDragEnd = async (event, weekId) => {
+    const { active, over } = event;
+    
+    if (active.id !== over?.id) {
+      const week = weeks.find(w => w.id === weekId);
+      if (!week) return;
+      
+      const oldIndex = week.tasks.findIndex(t => t.id === active.id);
+      const newIndex = week.tasks.findIndex(t => t.id === over.id);
+      
+      const newTasks = arrayMove(week.tasks, oldIndex, newIndex);
+      
+      // Update local state immediately
+      setWeeks(prev => prev.map(w => 
+        w.id === weekId ? { ...w, tasks: newTasks } : w
+      ));
+      
+      // Save to backend
+      setSaving(true);
+      try {
+        await axios.put(`${API}/weeks/${weekId}/tasks/reorder`, {
+          task_ids: newTasks.map(t => t.id)
+        });
+      } catch (error) {
+        toast.error("Failed to save task order");
+        // Revert on error
+        fetchWeeks();
+      } finally {
+        setSaving(false);
+      }
+    }
+  };
 
   // Calculate overall progress
   const calculateOverallProgress = () => {
@@ -711,22 +766,33 @@ const DashboardPage = () => {
                   {/* Tasks List */}
                   {isExpanded && (
                     <div className="border-t border-gray-100 p-4 animate-fade-in" data-testid={`week-${week.week_number}-tasks`}>
-                      <div className="space-y-2">
-                        {week.tasks?.map((task) => (
-                          <TaskItem
-                            key={task.id}
-                            task={task}
-                            weekId={week.id}
-                            weekNumber={week.week_number}
-                            editingTaskId={editingTaskId}
-                            setEditingTaskId={setEditingTaskId}
-                            toggleTaskCompletion={toggleTaskCompletion}
-                            updateTask={updateTask}
-                            deleteTask={deleteTask}
-                            openCommentDialog={(task) => setCommentDialog({ open: true, weekId: week.id, taskId: task.id, task })}
-                          />
-                        ))}
-                      </div>
+                      <DndContext
+                        sensors={sensors}
+                        collisionDetection={closestCenter}
+                        onDragEnd={(event) => handleDragEnd(event, week.id)}
+                      >
+                        <SortableContext
+                          items={week.tasks?.map(t => t.id) || []}
+                          strategy={verticalListSortingStrategy}
+                        >
+                          <div className="space-y-2">
+                            {week.tasks?.map((task) => (
+                              <SortableTaskItem
+                                key={task.id}
+                                task={task}
+                                weekId={week.id}
+                                weekNumber={week.week_number}
+                                editingTaskId={editingTaskId}
+                                setEditingTaskId={setEditingTaskId}
+                                toggleTaskCompletion={toggleTaskCompletion}
+                                updateTask={updateTask}
+                                deleteTask={deleteTask}
+                                openCommentDialog={(task) => setCommentDialog({ open: true, weekId: week.id, taskId: task.id, task })}
+                              />
+                            ))}
+                          </div>
+                        </SortableContext>
+                      </DndContext>
 
                       {/* Add Task Button */}
                       <Button
@@ -1031,19 +1097,53 @@ const DashboardPage = () => {
   );
 };
 
+// Sortable Task Item Wrapper
+const SortableTaskItem = (props) => {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: props.task.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+    zIndex: isDragging ? 1000 : 1,
+  };
+
+  return (
+    <div ref={setNodeRef} style={style}>
+      <TaskItem {...props} dragHandleProps={{ ...attributes, ...listeners }} isDragging={isDragging} />
+    </div>
+  );
+};
+
 // Task Item Component
-const TaskItem = ({ task, weekId, weekNumber, editingTaskId, setEditingTaskId, toggleTaskCompletion, updateTask, deleteTask, openCommentDialog }) => {
+const TaskItem = ({ task, weekId, weekNumber, editingTaskId, setEditingTaskId, toggleTaskCompletion, updateTask, deleteTask, openCommentDialog, dragHandleProps, isDragging }) => {
   const [editTitle, setEditTitle] = useState(task.title);
   const [editDueDate, setEditDueDate] = useState(task.due_date ? new Date(task.due_date) : null);
   const isEditing = editingTaskId === task.id;
 
   return (
     <div
-      className={`task-item flex items-start gap-3 p-3 rounded-lg border ${
+      className={`task-item flex items-start gap-2 p-3 rounded-lg border ${
         task.completed ? "bg-green-50 border-green-200" : "bg-white border-gray-200"
-      }`}
+      } ${isDragging ? "shadow-lg ring-2 ring-[#E40000]/20" : ""}`}
       data-testid={`task-${task.id}`}
     >
+      {/* Drag Handle */}
+      <div
+        {...dragHandleProps}
+        className="cursor-grab active:cursor-grabbing p-1 hover:bg-gray-100 rounded transition-colors mt-0.5"
+        data-testid={`task-${task.id}-drag-handle`}
+      >
+        <GripVertical className="w-4 h-4 text-gray-400" />
+      </div>
+
       <Checkbox
         checked={task.completed}
         onCheckedChange={() => toggleTaskCompletion(weekId, task.id, task.completed)}

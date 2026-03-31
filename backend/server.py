@@ -123,6 +123,9 @@ class CommentCreate(BaseModel):
 class WeekUpdate(BaseModel):
     title: Optional[str] = None
 
+class TaskReorderRequest(BaseModel):
+    task_ids: List[str]
+
 class PasswordChangeRequest(BaseModel):
     current_password: str
     new_password: str
@@ -307,6 +310,29 @@ async def add_task(week_id: str, task: TaskCreate, user: dict = Depends(get_curr
         raise HTTPException(status_code=404, detail="Week not found")
     
     return new_task
+
+@weeks_router.put("/{week_id}/tasks/reorder")
+async def reorder_tasks(week_id: str, request: TaskReorderRequest, user: dict = Depends(get_current_user)):
+    week = await db.weeks.find_one({"id": week_id}, {"_id": 0})
+    if not week:
+        raise HTTPException(status_code=404, detail="Week not found")
+    
+    # Create a map of task_id to task
+    tasks_map = {task["id"]: task for task in week.get("tasks", [])}
+    
+    # Reorder tasks based on the provided order
+    reordered_tasks = []
+    for task_id in request.task_ids:
+        if task_id in tasks_map:
+            reordered_tasks.append(tasks_map[task_id])
+    
+    # Update the week with reordered tasks
+    await db.weeks.update_one(
+        {"id": week_id},
+        {"$set": {"tasks": reordered_tasks}}
+    )
+    
+    return {"message": "Tasks reordered", "tasks": reordered_tasks}
 
 @weeks_router.put("/{week_id}/tasks/{task_id}")
 async def update_task(week_id: str, task_id: str, update: TaskUpdate, user: dict = Depends(get_current_user)):
