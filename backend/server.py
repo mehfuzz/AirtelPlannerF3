@@ -149,8 +149,8 @@ async def login(request: LoginRequest, response: Response):
     access_token = create_access_token(user_id, email)
     refresh_token = create_refresh_token(user_id)
     
-    response.set_cookie(key="access_token", value=access_token, httponly=True, secure=False, samesite="lax", max_age=86400, path="/")
-    response.set_cookie(key="refresh_token", value=refresh_token, httponly=True, secure=False, samesite="lax", max_age=604800, path="/")
+    response.set_cookie(key="access_token", value=access_token, httponly=True, secure=False, samesite="none", max_age=86400, path="/")
+    response.set_cookie(key="refresh_token", value=refresh_token, httponly=True, secure=False, samesite="none", max_age=604800, path="/")
     
     # Check if this is first login (password not changed yet) for non-admin users
     password_changed = user.get("password_changed", False)
@@ -440,16 +440,18 @@ api_router.include_router(weeks_router)
 async def root():
     return {"message": "Airtel PPO Tracker API"}
 
-app.include_router(api_router)
-
-# CORS
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
-    allow_origins=os.environ.get('CORS_ORIGINS', '*').split(','),
+    allow_origins=os.environ.get('CORS_ORIGINS', 'http://localhost:3000').split(','),
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.include_router(api_router)
+
+# CORS
+
 
 # Configure logging
 logging.basicConfig(
