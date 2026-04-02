@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Plus, Trash2, User, Mail, Shield, Eye, EyeOff } from "lucide-react";
+import { supabase } from "@/lib/supabaseClient";
 
 const UserManagementPage = () => {
   const navigate = useNavigate();
@@ -22,26 +23,52 @@ const UserManagementPage = () => {
   const [saving, setSaving] = useState(false);
 
   const fetchUsers = useCallback(async () => {
-    try {
-      const response = await axios.get(`${API}/users`);
-      setUsers(response.data);
-    } catch (error) {
-      toast.error(formatApiError(error.response?.data?.detail));
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  try {
+    const { data, error } = await supabase
+      .from('users')
+      .select('id, email, name, role');
+
+    if (error) throw error;
+    setUsers(data);
+  } catch (error) {
+    toast.error(error.message || "Failed to load users");
+  } finally {
+    setLoading(false);
+  }
+}, []);
 
   useEffect(() => {
     fetchUsers();
   }, [fetchUsers]);
 
   const addUser = async (e) => {
-    e.preventDefault();
-    if (!newUser.email || !newUser.password || !newUser.name) {
-      toast.error("Please fill all fields");
-      return;
-    }
+  e.preventDefault();
+  if (!newUser.email || !newUser.password || !newUser.name) {
+    toast.error("Please fill all fields");
+    return;
+  }
+
+  setSaving(true);
+  try {
+    const { data, error } = await supabase.rpc('admin_create_user', {
+      admin_id:     user.id,
+      new_email:    newUser.email,
+      new_password: newUser.password,
+      new_name:     newUser.name,
+    });
+
+    if (error) throw error;
+
+    setUsers(prev => [...prev, data]);
+    setAddUserDialog(false);
+    setNewUser({ email: "", password: "", name: "" });
+    toast.success("User added successfully");
+  } catch (error) {
+    toast.error(error.message || "Failed to add user");
+  } finally {
+    setSaving(false);
+  }
+};
 
     setSaving(true);
     try {
