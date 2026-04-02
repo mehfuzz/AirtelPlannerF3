@@ -45,6 +45,7 @@ const DashboardPage = () => {
   const [dayTasksDialog, setDayTasksDialog] = useState({ open: false, date: null, tasks: [] });
   const [draggedTask, setDraggedTask] = useState(null);
   const [dragOverTask, setDragOverTask] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   // Fetch weeks data
   const fetchWeeks = useCallback(async () => {
@@ -59,6 +60,8 @@ const DashboardPage = () => {
       setExpandedWeeks(expanded);
     } catch (error) {
       toast.error(formatApiError(error.response?.data?.detail));
+    } finally {
+      setLoading(false);
     }
   }, []);
 
@@ -631,6 +634,65 @@ const DashboardPage = () => {
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+        {/* Loading Skeleton */}
+        {loading && (
+          <div className="animate-pulse" data-testid="dashboard-loading">
+            {/* Title skeleton */}
+            <div className="mb-8">
+              <div className="h-3 w-40 bg-gray-200 rounded mb-3"></div>
+              <div className="h-9 w-96 bg-gray-200 rounded mb-2"></div>
+              <div className="h-4 w-64 bg-gray-100 rounded"></div>
+            </div>
+
+            {/* Progress card skeleton */}
+            <div className="bg-white border border-gray-200 rounded-lg shadow-sm p-6 mb-8">
+              <div className="flex items-center justify-between mb-4">
+                <div className="h-5 w-36 bg-gray-200 rounded"></div>
+                <div className="h-9 w-16 bg-gray-200 rounded"></div>
+              </div>
+              <div className="h-3 w-full bg-gray-100 rounded-full mb-3"></div>
+              <div className="h-4 w-40 bg-gray-100 rounded"></div>
+            </div>
+
+            {/* Tabs skeleton */}
+            <div className="flex mb-6">
+              <div className="h-9 w-48 bg-gray-100 rounded-lg"></div>
+            </div>
+
+            {/* Week card skeletons */}
+            {[1, 2, 3, 4].map(i => (
+              <div key={i} className="bg-white border border-gray-200 rounded-lg shadow-sm mb-4 overflow-hidden">
+                <div className="flex items-center gap-4 p-4">
+                  <div className="w-12 h-12 bg-gray-200 rounded-lg flex-shrink-0"></div>
+                  <div className="flex-1">
+                    <div className="h-5 bg-gray-200 rounded w-56 mb-2"></div>
+                    <div className="flex items-center gap-4">
+                      <div className="h-2 w-32 bg-gray-100 rounded-full"></div>
+                      <div className="h-4 w-20 bg-gray-100 rounded"></div>
+                    </div>
+                  </div>
+                  <div className="w-5 h-5 bg-gray-100 rounded"></div>
+                </div>
+                {i <= 2 && (
+                  <div className="border-t border-gray-100 p-4 space-y-2">
+                    {[1, 2, 3].map(j => (
+                      <div key={j} className="flex items-center gap-3 p-3 rounded-lg border border-gray-100">
+                        <div className="w-4 h-4 bg-gray-100 rounded flex-shrink-0"></div>
+                        <div className="w-4 h-4 bg-gray-100 rounded flex-shrink-0"></div>
+                        <div className="h-4 rounded bg-gray-100" style={{ width: `${55 + j * 12}%` }}></div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Actual content — hidden until loaded */}
+        {!loading && (
+          <>
         {/* Title Section */}
         <div className="mb-8">
           <div className="flex items-center gap-2 text-xs text-gray-500 uppercase tracking-widest mb-2">
@@ -938,6 +1000,8 @@ const DashboardPage = () => {
         <div className="mt-8 text-center text-sm text-gray-500">
           All changes saved automatically · Click any title or task to edit
         </div>
+          </>
+        )}
       </main>
 
       {/* Add Task Dialog */}
