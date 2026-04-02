@@ -45,7 +45,13 @@ const UserManagementPage = () => {
 
     setSaving(true);
     try {
-      const response = await axios.post(`${API}/users`, newUser);
+      const response = await supabase.rpc('admin_create_user', {
+        admin_id:     user.id,        // current logged-in admin's UUID
+        new_email:    newUser.email,
+        new_password: newUser.password,
+        new_name:     newUser.name,
+      });
+      if (response.error) throw response.error;
       setUsers(prev => [...prev, response.data]);
       setAddUserDialog(false);
       setNewUser({ email: "", password: "", name: "" });
