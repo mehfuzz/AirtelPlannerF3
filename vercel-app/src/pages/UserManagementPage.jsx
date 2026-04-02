@@ -25,7 +25,6 @@ const UserManagementPage = () => {
       const { data, error } = await supabase
         .from('users')
         .select('id, email, name, role');
-      
       if (error) throw error;
       setUsers(data || []);
     } catch (error) {
@@ -48,28 +47,30 @@ const UserManagementPage = () => {
 
     setSaving(true);
     try {
-      const { data, error } = await supabase
-        .rpc('create_user_with_password', {
-          user_email: newUser.email.toLowerCase(),
-          user_password: newUser.password,
-          user_name: newUser.name
-        });
+      const { data, error } = await supabase.rpc('create_user_with_password', {
+        user_id: crypto.randomUUID(),              // ✅ required param
+        user_email: newUser.email.toLowerCase(),
+        user_password: newUser.password,
+        user_name: newUser.name,
+      });
 
       if (error) throw error;
 
-      const newUserData = {
-        id: data,
-        email: newUser.email.toLowerCase(),
-        name: newUser.name,
-        role: 'user'
-      };
+      // Fetch the newly created user to get full data back
+      const { data: created, error: fetchError } = await supabase
+        .from('users')
+        .select('id, email, name, role')
+        .eq('email', newUser.email.toLowerCase())
+        .single();
 
-      setUsers(prev => [...prev, newUserData]);
+      if (fetchError) throw fetchError;
+
+      setUsers(prev => [...prev, created]);
       setAddUserDialog(false);
       setNewUser({ email: "", password: "", name: "" });
       toast.success("User added successfully");
     } catch (error) {
-      toast.error(formatApiError(error.response?.data?.detail));
+      toast.error(formatApiError(error));   // ✅ correct error format
     } finally {
       setSaving(false);
     }
@@ -80,11 +81,16 @@ const UserManagementPage = () => {
 
     setSaving(true);
     try {
-      await axios.delete(`${API}/users/${userId}`);
+      const { error } = await supabase       // ✅ supabase, not axios
+        .from('users')
+        .delete()
+        .eq('id', userId);
+
+      if (error) throw error;
       setUsers(prev => prev.filter(u => u.id !== userId));
       toast.success("User deleted");
     } catch (error) {
-      toast.error(formatApiError(error.response?.data?.detail));
+      toast.error(formatApiError(error));    // ✅ correct error format
     } finally {
       setSaving(false);
     }
@@ -97,26 +103,14 @@ const UserManagementPage = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center gap-4">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => navigate("/")}
-                className="text-gray-600 hover:text-gray-900"
-                data-testid="back-to-dashboard"
-              >
-                <ArrowLeft className="w-4 h-4 mr-2" />
-                Back
+              <Button variant="ghost" size="sm" onClick={() => navigate("/")} className="text-gray-600 hover:text-gray-900" data-testid="back-to-dashboard">
+                <ArrowLeft className="w-4 h-4 mr-2" />Back
               </Button>
               <div className="h-6 w-px bg-gray-300"></div>
               <h1 className="text-lg font-bold text-gray-900 font-['Outfit']">User Management</h1>
             </div>
-            <Button
-              onClick={() => setAddUserDialog(true)}
-              className="bg-[#E40000] hover:bg-[#B30000]"
-              data-testid="add-user-button"
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              Add User
+            <Button onClick={() => setAddUserDialog(true)} className="bg-[#E40000] hover:bg-[#B30000]" data-testid="add-user-button">
+              <Plus className="w-4 h-4 mr-2" />Add User
             </Button>
           </div>
         </div>
@@ -157,29 +151,17 @@ const UserManagementPage = () => {
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2 text-gray-600">
-                        <Mail className="w-4 h-4" />
-                        {u.email}
+                        <Mail className="w-4 h-4" />{u.email}
                       </div>
                     </TableCell>
                     <TableCell>
-                      <Badge
-                        variant={u.role === "admin" ? "default" : "secondary"}
-                        className={u.role === "admin" ? "bg-[#E40000]" : ""}
-                      >
-                        <Shield className="w-3 h-3 mr-1" />
-                        {u.role}
+                      <Badge variant={u.role === "admin" ? "default" : "secondary"} className={u.role === "admin" ? "bg-[#E40000]" : ""}>
+                        <Shield className="w-3 h-3 mr-1" />{u.role}
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right">
                       {u.id !== user?.id && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => deleteUser(u.id)}
-                          disabled={saving}
-                          className="text-gray-400 hover:text-red-600"
-                          data-testid={`delete-user-${u.id}`}
-                        >
+                        <Button variant="ghost" size="sm" onClick={() => deleteUser(u.id)} disabled={saving} className="text-gray-400 hover:text-red-600" data-testid={`delete-user-${u.id}`}>
                           <Trash2 className="w-4 h-4" />
                         </Button>
                       )}
@@ -191,7 +173,6 @@ const UserManagementPage = () => {
           )}
         </div>
 
-        {/* Info Card */}
         <div className="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
           <h3 className="font-semibold text-blue-900 mb-2">Managing Access</h3>
           <p className="text-sm text-blue-700">
@@ -210,58 +191,24 @@ const UserManagementPage = () => {
           <form onSubmit={addUser} className="space-y-4">
             <div>
               <Label htmlFor="name">Name</Label>
-              <Input
-                id="name"
-                value={newUser.name}
-                onChange={(e) => setNewUser(prev => ({ ...prev, name: e.target.value }))}
-                placeholder="Full Name"
-                className="mt-1"
-                data-testid="new-user-name-input"
-              />
+              <Input id="name" value={newUser.name} onChange={(e) => setNewUser(prev => ({ ...prev, name: e.target.value }))} placeholder="Full Name" className="mt-1" data-testid="new-user-name-input" />
             </div>
             <div>
               <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                value={newUser.email}
-                onChange={(e) => setNewUser(prev => ({ ...prev, email: e.target.value }))}
-                placeholder="user@airtel.com"
-                className="mt-1"
-                data-testid="new-user-email-input"
-              />
+              <Input id="email" type="email" value={newUser.email} onChange={(e) => setNewUser(prev => ({ ...prev, email: e.target.value }))} placeholder="user@airtel.com" className="mt-1" data-testid="new-user-email-input" />
             </div>
             <div>
               <Label htmlFor="password">Default Password</Label>
               <div className="relative mt-1">
-                <Input
-                  id="password"
-                  type={showPassword ? "text" : "password"}
-                  value={newUser.password}
-                  onChange={(e) => setNewUser(prev => ({ ...prev, password: e.target.value }))}
-                  placeholder="Set a password"
-                  className="pr-10"
-                  data-testid="new-user-password-input"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                >
+                <Input id="password" type={showPassword ? "text" : "password"} value={newUser.password} onChange={(e) => setNewUser(prev => ({ ...prev, password: e.target.value }))} placeholder="Set a password" className="pr-10" data-testid="new-user-password-input" />
+                <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
             </div>
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setAddUserDialog(false)}>
-                Cancel
-              </Button>
-              <Button
-                type="submit"
-                disabled={saving}
-                className="bg-[#E40000] hover:bg-[#B30000]"
-                data-testid="add-user-submit"
-              >
+              <Button type="button" variant="outline" onClick={() => setAddUserDialog(false)}>Cancel</Button>
+              <Button type="submit" disabled={saving} className="bg-[#E40000] hover:bg-[#B30000]" data-testid="add-user-submit">
                 {saving ? "Adding..." : "Add User"}
               </Button>
             </DialogFooter>
